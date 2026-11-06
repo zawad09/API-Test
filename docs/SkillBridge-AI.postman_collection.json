@@ -1,0 +1,290 @@
+{
+  "info": {
+    "name": "SkillBridge AI API",
+    "description": "Complete workflow for the SkillBridge AI Career Skill Gap Analyzer backend. Run the requests top to bottom: variables (token, jobId, analysisId) are captured automatically from responses. The AI Career Coach folder works with or without an AI key (rule-based fallback).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "analysisId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/health", "host": ["{{baseUrl}}"], "path": ["api", "health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.success && body.data && body.data.token) {",
+                  "  pm.collectionVariables.set('token', body.data.token);",
+                  "}",
+                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahim Uddin\",\n  \"email\": \"rahim@example.com\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "description": "First run: 201. Running again with the same email returns 409 (duplicate) - that is expected."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.success && body.data && body.data.token) {",
+                  "  pm.collectionVariables.set('token', body.data.token);",
+                  "}",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahim@example.com\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Get current user (/me)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Get profile",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/users/profile", "host": ["{{baseUrl}}"], "path": ["api", "users", "profile"] }
+          }
+        },
+        {
+          "name": "Update profile + skills",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"education\": \"BSc in Computer Science & Engineering\",\n  \"university\": \"University of Dhaka\",\n  \"careerGoal\": \"Become a backend developer at a product company\",\n  \"experienceLevel\": \"beginner\",\n  \"currentSkills\": [\n    { \"skillName\": \"JavaScript\", \"proficiencyLevel\": \"advanced\" },\n    { \"skillName\": \"Node.js\", \"proficiencyLevel\": \"beginner\" },\n    { \"skillName\": \"MongoDB\", \"proficiencyLevel\": \"intermediate\" },\n    { \"skillName\": \"Git\", \"proficiencyLevel\": \"intermediate\" },\n    { \"skillName\": \"SQL\", \"proficiencyLevel\": \"beginner\" }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/profile", "host": ["{{baseUrl}}"], "path": ["api", "users", "profile"] },
+            "description": "Demo skill profile used in the README worked example (expected match: 65.52% against Junior Backend Developer)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "List all active jobs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.success && body.data && body.data.jobs) {",
+                  "  const target = body.data.jobs.find((j) => j.title === 'Junior Backend Developer');",
+                  "  if (target) pm.collectionVariables.set('jobId', target._id);",
+                  "}",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/jobs", "host": ["{{baseUrl}}"], "path": ["api", "jobs"] }
+          }
+        },
+        {
+          "name": "Filter jobs (category + level)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs?category=Backend%20Development&experienceLevel=beginner",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs"],
+              "query": [
+                { "key": "category", "value": "Backend Development" },
+                { "key": "experienceLevel", "value": "beginner" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get job by id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analysis",
+      "item": [
+        {
+          "name": "Run skill-gap analysis",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.success && body.data && body.data.analysisId) {",
+                  "  pm.collectionVariables.set('analysisId', body.data.analysisId);",
+                  "}",
+                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/analysis/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "analysis", "{{jobId}}"] }
+          }
+        },
+        {
+          "name": "Analysis history",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/analysis/history", "host": ["{{baseUrl}}"], "path": ["api", "analysis", "history"] }
+          }
+        },
+        {
+          "name": "Get analysis by id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/analysis/{{analysisId}}", "host": ["{{baseUrl}}"], "path": ["api", "analysis", "{{analysisId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recommendations",
+      "item": [
+        {
+          "name": "Get recommendations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/recommendations/{{analysisId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recommendations", "{{analysisId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Career Coach",
+      "item": [
+        {
+          "name": "AI explain analysis (rule-based fallback if no key)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/explain/{{analysisId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "explain", "{{analysisId}}"]
+            },
+            "description": "Uses the configured AI provider when AI_ENABLED=true + AI_API_KEY are set (source: ai); otherwise the built-in rule-based coach answers (source: rule-based)."
+          }
+        },
+        {
+          "name": "AI learning roadmap (rule-based fallback if no key)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/roadmap/{{analysisId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "roadmap", "{{analysisId}}"]
+            },
+            "description": "Week-by-week learning plan generated from the saved recommendations (max 8 weeks)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error demos",
+      "item": [
+        {
+          "name": "Protected endpoint without token (expect 401)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/analysis/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "analysis", "{{jobId}}"] },
+            "description": "Temporarily clear the collection token variable to see the 401."
+          }
+        },
+        {
+          "name": "Invalid job id (expect 400)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/analysis/123", "host": ["{{baseUrl}}"], "path": ["api", "analysis", "123"] }
+          }
+        },
+        {
+          "name": "Nonexistent job (expect 404)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/analysis/000000000000000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analysis", "000000000000000000000000"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
